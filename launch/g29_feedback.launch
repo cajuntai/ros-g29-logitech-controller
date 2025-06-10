@@ -1,7 +1,14 @@
 <launch>
     
-    <node pkg="ros_g29_logitech_controller" type="ros_g29_logitech_controller_node" name="ros_g29_logitech_controller_node" output="screen">
+    <node pkg="ros_g29_logitech_controller"
+          type="ros_g29_logitech_controller_node"
+          name="ros_g29_logitech_controller_node"
+          output="screen"
+          respawn="true"
+          launch-prefix="">
+
         <rosparam command="load" file="$(find ros_g29_logitech_controller)/config/g29.yaml"/>
+        
     </node>
 
 </launch>
