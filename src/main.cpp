@@ -41,6 +41,7 @@ int main(int argc, char **argv)
             "/g29/ff_target", 10,
             [g29_ff](const ros_g29_logitech_controller::ForceFeedback& msg) -> void
             {
+                assert(g29_ff != nullptr && "g29_ff should not be nullptr");
                 g29_ff->sendTargetFeedback(msg);
             }
         );
