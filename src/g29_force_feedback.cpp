@@ -16,7 +16,7 @@ G29ForceFeedback::G29ForceFeedback()
     sub_target = nh_.subscribe("/ff_target", 1, &G29ForceFeedback::targetCallback, this);
 
     using ros::param::param;
-    m_device_name = param<std::string>("~device_name", "/dev/event0");
+    m_device_name = param<std::string>("~device_name", "/dev/input/event0");
     m_loop_rate = param<double>("~loop_rate", 0.01);
     m_max_torque = param<double>("~max_torque", 1.0);
     m_min_torque = param<double>("~min_torque", 0.1);
@@ -175,7 +175,7 @@ void G29ForceFeedback::initDevice()
     if (m_device_handle < 0)
     {
         std::cout << "ERROR: cannot open device : "<< m_device_name << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
     else
     {
@@ -187,7 +187,7 @@ void G29ForceFeedback::initDevice()
     if (ioctl(m_device_handle, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) < 0)
     {
         std::cout << "ERROR: cannot get abs bits" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
 
     // get some information about force feedback
@@ -195,28 +195,28 @@ void G29ForceFeedback::initDevice()
     if (ioctl(m_device_handle, EVIOCGBIT(EV_FF, sizeof(ff_bits)), ff_bits) < 0)
     {
         std::cout << "ERROR: cannot get ff bits" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
 
     // get axis value range
     if (ioctl(m_device_handle, EVIOCGABS(m_axis_code), &abs_info) < 0)
     {
         std::cout << "ERROR: cannot get axis range" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
     m_axis_max = abs_info.maximum;
     m_axis_min = abs_info.minimum;
     if (m_axis_min >= m_axis_max)
     {
         std::cout << "ERROR: axis range has bad value" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
 
     // check force feedback is supported?
     if(!testBit(FF_CONSTANT, ff_bits))
     {
         std::cout << "ERROR: force feedback is not supported" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
     else
     {
@@ -231,7 +231,7 @@ void G29ForceFeedback::initDevice()
     if (write(m_device_handle, &event, sizeof(event)) != sizeof(event))
     {
         std::cout << "failed to disable auto centering" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
 
     // init effect and get effect id
@@ -252,7 +252,7 @@ void G29ForceFeedback::initDevice()
     if (ioctl(m_device_handle, EVIOCSFF, &m_effect) < 0)
     {
         std::cout << "failed to upload m_effect" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
 
     // start m_effect
@@ -263,7 +263,7 @@ void G29ForceFeedback::initDevice()
     if (write(m_device_handle, &event, sizeof(event)) != sizeof(event))
     {
         std::cout << "failed to start event" << std::endl;
-        exit(1);
+        throw std::runtime_error("Failed to open device!");
     }
 }
 
