@@ -1,35 +1,38 @@
-#include <ros/ros.h>
 #include <linux/input.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <math.h>
+#include <thread>
+#include <chrono>
+
+#include <ros/ros.h>
 
 #include "ros_g29_logitech_controller/ForceFeedback.h"
 
 #include "ros_g29_logitech_controller/g29_force_feedback.hpp"
 
 
-G29ForceFeedback::G29ForceFeedback()
+G29ForceFeedback::G29ForceFeedback(Configuration config)
 :   m_axis_code(ABS_MAX)
 {
     sub_target = nh_.subscribe("/ff_target", 1, &G29ForceFeedback::targetCallback, this);
 
     using ros::param::param;
-    m_device_name = param<std::string>("~device_name", "/dev/input/event0");
-    m_loop_rate = param<double>("~loop_rate", 0.01);
-    m_max_torque = param<double>("~max_torque", 1.0);
-    m_min_torque = param<double>("~min_torque", 0.1);
-    m_brake_position = param<double>("~brake_position", 0.05);
-    m_brake_torque_rate = param<double>("~brake_torque_rate", 0.5);
-    m_auto_centering_max_torque = param<double>("~auto_centering_max_torque", 1.0);
-    m_auto_centering_max_position = param<double>("~auto_centering_max_position", 1.0);
-    m_eps = param<double>("~eps", 0.01);
-    m_auto_centering = param<bool>("~auto_centering", false);
+    m_device_name                 = config.device_name;
+    m_loop_rate                   = config.loop_rate;
+    m_max_torque                  = config.max_torque;
+    m_min_torque                  = config.min_torque;
+    m_brake_position              = config.brake_position;
+    m_brake_torque_rate           = config.brake_torque_rate;
+    m_auto_centering_max_torque   = config.auto_centering_max_torque;
+    m_auto_centering_max_position = config.auto_centering_max_position;
+    m_eps                         = config.eps;
+    m_auto_centering              = config.auto_centering;
 
     initDevice();
 
-    ros::Duration(1).sleep();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     timer = nh_.createTimer(ros::Duration(m_loop_rate), &G29ForceFeedback::loop, this);
 }
 

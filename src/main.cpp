@@ -6,7 +6,35 @@
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ros_g29_logitech_controller_node");
-    G29ForceFeedback g29_ff;
+
+    using ros::param::param;
+    const auto device_name = param<std::string>("~device_name", "/dev/input/event0");
+    const auto loop_rate = param<double>("~loop_rate", 0.01);
+    const auto max_torque = param<double>("~max_torque", 1.0);
+    const auto min_torque = param<double>("~min_torque", 0.1);
+    const auto brake_position = param<double>("~brake_position", 0.05);
+    const auto brake_torque_rate = param<double>("~brake_torque_rate", 0.5);
+    const auto auto_centering_max_torque = param<double>("~auto_centering_max_torque", 1.0);
+    const auto auto_centering_max_position = param<double>("~auto_centering_max_position", 1.0);
+    const auto eps = param<double>("~eps", 0.01);
+    const auto auto_centering = param<bool>("~auto_centering", false);
+
+    auto g29_ff = std::make_unique<G29ForceFeedback>(
+        G29ForceFeedback::Configuration {
+            .device_name = device_name,
+            .loop_rate = loop_rate,
+            .max_torque = max_torque,
+            .min_torque = min_torque,
+            .brake_position = brake_position,
+            .brake_torque_rate = brake_torque_rate,
+            .auto_centering_max_torque = auto_centering_max_torque,
+            .auto_centering_max_position = auto_centering_max_position,
+            .eps = eps,
+            .auto_centering = auto_centering
+        }
+    );
+
     ros::spin();
-    return(0);
+
+    return 0;
 }
