@@ -5,6 +5,7 @@
 #include <math.h>
 #include <thread>
 #include <chrono>
+#include <future>
 
 #include <ros/ros.h>
 
@@ -16,9 +17,6 @@
 G29ForceFeedback::G29ForceFeedback(Configuration config)
 :   m_axis_code(ABS_MAX)
 {
-    sub_target = nh_.subscribe("/ff_target", 1, &G29ForceFeedback::targetCallback, this);
-
-    using ros::param::param;
     m_device_name                 = config.device_name;
     m_loop_rate                   = config.loop_rate;
     m_max_torque                  = config.max_torque;
@@ -33,11 +31,26 @@ G29ForceFeedback::G29ForceFeedback(Configuration config)
     initDevice();
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    timer = nh_.createTimer(ros::Duration(m_loop_rate), &G29ForceFeedback::loop, this);
+    m_ff_loop_future = std::async(std::launch::async, &G29ForceFeedback::loop, this);
 }
 
 G29ForceFeedback::~G29ForceFeedback()
 {
+    m_should_exit.store(true);
+    if (m_ff_loop_future.valid())
+    {
+        try
+        {
+            std::cout << "Stopping control thread...";
+            m_ff_loop_future.get();
+            std::cout << "Done!" << std::endl;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[ERROR] Caught exception when stopping control thread: " << e.what() << std::endl;
+        }
+    }
+
     m_effect.type = FF_CONSTANT;
     m_effect.id = -1;
     m_effect.u.constant.level = 0;
@@ -46,37 +59,40 @@ G29ForceFeedback::~G29ForceFeedback()
     // upload m_effect
     if (ioctl(m_device_handle, EVIOCSFF, &m_effect) < 0)
     {
-        std::cout << "failed to upload m_effect" << std::endl;
+        std::cout << "Failed to upload m_effect" << std::endl;
     }
 }
 
 // update input event with timer callback
-void G29ForceFeedback::loop(const ros::TimerEvent&)
+void G29ForceFeedback::loop()
 {
     struct input_event event;
     double last_position = m_position;
 
-    // get current state
-    while (read(m_device_handle, &event, sizeof(event)) == sizeof(event))
+    while (!m_should_exit.load())
     {
-        if (event.type == EV_ABS && event.code == m_axis_code)
+        // get current state
+        while (read(m_device_handle, &event, sizeof(event)) == sizeof(event))
         {
-            m_position = (event.value - (m_axis_max + m_axis_min) * 0.5) * 2 / (m_axis_max - m_axis_min);
+            if (event.type == EV_ABS && event.code == m_axis_code)
+            {
+                m_position = (event.value - (m_axis_max + m_axis_min) * 0.5) * 2 / (m_axis_max - m_axis_min);
+            }
         }
-    }
 
-    if (m_is_brake_range || m_auto_centering)
-    {
-        calcCenteringForce(m_torque, m_target, m_position);
-        m_attack_length = 0.0;
-    }
-    else
-    {
-        calcRotateForce(m_torque, m_attack_length, m_target, m_position);
-        m_is_target_updated = false;
-    }
+        if (m_is_brake_range || m_auto_centering)
+        {
+            calcCenteringForce(m_torque, m_target, m_position);
+            m_attack_length = 0.0;
+        }
+        else
+        {
+            calcRotateForce(m_torque, m_attack_length, m_target, m_position);
+            m_is_target_updated = false;
+        }
 
-    uploadForce(m_target.position, m_torque, m_attack_length);
+        uploadForce(m_target.position, m_torque, m_attack_length);
+    }
 }
 
 
@@ -147,21 +163,21 @@ void G29ForceFeedback::uploadForce(const double& position, const double& torque,
 }
 
 
-// get target information of wheel control from ros message
-void G29ForceFeedback::targetCallback(const ros_g29_logitech_controller::ForceFeedback &in_msg)
+auto G29ForceFeedback::sendTargetFeedback(const ros_g29_logitech_controller::ForceFeedback& feedback_msg) -> void
 {
-    if (m_target.position == in_msg.position && m_target.torque == fabs(in_msg.torque))
+    if (m_target.position == feedback_msg.position && m_target.torque == fabs(feedback_msg.torque))
     {
         m_is_target_updated = false;
     }
     else
     {
-        m_target = in_msg;
+        m_target = feedback_msg;
         m_target.torque = fabs(m_target.torque);
         m_is_target_updated = true;
         m_is_brake_range = false;
     }
 }
+
 
 
 // initialize force feedback device

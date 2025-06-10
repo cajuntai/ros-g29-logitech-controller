@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <atomic>
+#include <future>
+
 #include <ros/ros.h>
 
 #include "ros_g29_logitech_controller/ForceFeedback.h"
@@ -9,7 +13,8 @@
 class G29ForceFeedback
 {
 public:
-    struct Configuration {
+    struct Configuration
+    {
         std::string device_name;
         double loop_rate;
         double max_torque;
@@ -24,11 +29,17 @@ public:
 
     G29ForceFeedback(Configuration config);
     ~G29ForceFeedback();
+    auto sendTargetFeedback(const ros_g29_logitech_controller::ForceFeedback& feedback_msg) -> void;
 
 private:
     ros::NodeHandle nh_;
-    ros::Subscriber sub_target;
-    ros::Timer timer;
+    // ros::Subscriber sub_target;
+
+    // ros::Timer timer;
+    std::future<void> m_ff_loop_future;
+
+    std::atomic_bool m_should_exit;
+
     // Device info
     int m_device_handle;
     int m_axis_code;
@@ -55,7 +66,7 @@ private:
     double m_attack_length;
 
     auto targetCallback(const ros_g29_logitech_controller::ForceFeedback& in_target) -> void;
-    auto loop(const ros::TimerEvent&) -> void;
+    auto loop() -> void;
     auto testBit(int bit, unsigned char *array) -> int;
     auto initDevice() -> void;
     auto calcRotateForce(double& torque, double& attack_length, const ros_g29_logitech_controller::ForceFeedback& target, const double& current_position) -> void;

@@ -6,6 +6,7 @@
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ros_g29_logitech_controller_node");
+    ros::NodeHandle nh;
 
     using ros::param::param;
     const auto device_name = param<std::string>("~device_name", "/dev/input/event0");
@@ -31,6 +32,14 @@ int main(int argc, char **argv)
             .auto_centering_max_position = auto_centering_max_position,
             .eps = eps,
             .auto_centering = auto_centering
+        }
+    );
+
+    ros::Subscriber feedback_sub = nh.subscribe<ros_g29_logitech_controller::ForceFeedback>(
+        "/g29/ff_target", 10,
+        [&g29_ff](const ros_g29_logitech_controller::ForceFeedback& msg) -> void
+        {
+            g29_ff->sendTargetFeedback(msg);
         }
     );
 
