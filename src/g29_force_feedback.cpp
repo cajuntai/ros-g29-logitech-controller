@@ -15,16 +15,17 @@ G29ForceFeedback::G29ForceFeedback()
 {
     sub_target = nh_.subscribe("/ff_target", 1, &G29ForceFeedback::targetCallback, this);
 
-    nh_.getParam("device_name", m_device_name);
-    nh_.getParam("loop_rate", m_loop_rate);
-    nh_.getParam("max_torque", m_max_torque);
-    nh_.getParam("min_torque", m_min_torque);
-    nh_.getParam("brake_position", m_brake_position);
-    nh_.getParam("brake_torque_rate", m_brake_torque_rate);
-    nh_.getParam("auto_centering_max_torque", m_auto_centering_max_torque);
-    nh_.getParam("auto_centering_max_position", m_auto_centering_max_position);
-    nh_.getParam("eps", m_eps);
-    nh_.getParam("auto_centering", m_auto_centering);
+    using ros::param::param;
+    m_device_name = param<std::string>("~device_name", "/dev/event0");
+    m_loop_rate = param<double>("~loop_rate", 0.01);
+    m_max_torque = param<double>("~max_torque", 1.0);
+    m_min_torque = param<double>("~min_torque", 0.1);
+    m_brake_position = param<double>("~brake_position", 0.05);
+    m_brake_torque_rate = param<double>("~brake_torque_rate", 0.5);
+    m_auto_centering_max_torque = param<double>("~auto_centering_max_torque", 1.0);
+    m_auto_centering_max_position = param<double>("~auto_centering_max_position", 1.0);
+    m_eps = param<double>("~eps", 0.01);
+    m_auto_centering = param<bool>("~auto_centering", false);
 
     initDevice();
 

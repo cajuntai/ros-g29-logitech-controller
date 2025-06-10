@@ -21,16 +21,16 @@ private:
     int m_axis_max;
 
     // rosparam
-    std::string m_device_name = "/dev/g29_steering_wheel_control";
-    double m_loop_rate = 0.1;
-    double m_max_torque = 1.0;
-    double m_min_torque = 0.2;
-    double m_brake_position = 0.2;
-    double m_brake_torque_rate = 0.1;
-    double m_auto_centering_max_torque = 0.3;
-    double m_auto_centering_max_position = 0.2;
-    double m_eps = 0.01;
-    bool m_auto_centering = false;
+    std::string m_device_name;
+    double m_loop_rate;
+    double m_max_torque;
+    double m_min_torque;
+    double m_brake_position;
+    double m_brake_torque_rate;
+    double m_auto_centering_max_torque;
+    double m_auto_centering_max_position;
+    double m_eps;
+    bool m_auto_centering;
 
 
     // variables
