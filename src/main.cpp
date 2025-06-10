@@ -20,7 +20,7 @@ int main(int argc, char **argv)
     const auto eps = param<double>("~eps", 0.01);
     const auto auto_centering = param<bool>("~auto_centering", false);
 
-    auto g29_ff = std::make_unique<G29ForceFeedback>(
+    auto g29_ff = std::make_shared<G29ForceFeedback>(
         G29ForceFeedback::Configuration {
             .device_name = device_name,
             .loop_rate = loop_rate,
@@ -35,13 +35,15 @@ int main(int argc, char **argv)
         }
     );
 
-    ros::Subscriber feedback_sub = nh.subscribe<ros_g29_logitech_controller::ForceFeedback>(
-        "/g29/ff_target", 10,
-        [&g29_ff](const ros_g29_logitech_controller::ForceFeedback& msg) -> void
-        {
-            g29_ff->sendTargetFeedback(msg);
-        }
-    );
+    // When using lambda with capture as callback, the subscribe with template<M, C> must be used to force compiler to pick that overload
+    ros::Subscriber feedback_sub =
+        nh.subscribe<ros_g29_logitech_controller::ForceFeedback, const ros_g29_logitech_controller::ForceFeedback&>(
+            "/g29/ff_target", 10,
+            [g29_ff](const ros_g29_logitech_controller::ForceFeedback& msg) -> void
+            {
+                g29_ff->sendTargetFeedback(msg);
+            }
+        );
 
     ros::spin();
 

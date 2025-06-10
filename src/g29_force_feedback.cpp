@@ -7,8 +7,6 @@
 #include <chrono>
 #include <future>
 
-#include <ros/ros.h>
-
 #include "ros_g29_logitech_controller/ForceFeedback.h"
 
 #include "ros_g29_logitech_controller/g29_force_feedback.hpp"
@@ -30,7 +28,7 @@ G29ForceFeedback::G29ForceFeedback(Configuration config)
 
     initDevice();
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(1));   // Grace time after opening device
     m_ff_loop_future = std::async(std::launch::async, &G29ForceFeedback::loop, this);
 }
 
@@ -67,7 +65,7 @@ G29ForceFeedback::~G29ForceFeedback()
 void G29ForceFeedback::loop()
 {
     struct input_event event;
-    double last_position = m_position;
+    // double last_position = m_position;
 
     while (!m_should_exit.load())
     {
@@ -145,7 +143,7 @@ void G29ForceFeedback::calcCenteringForce(double &torque,
 
 
 // update input event with writing information to the event file
-void G29ForceFeedback::uploadForce(const double& position, const double& torque, const double& attack_length)
+void G29ForceFeedback::uploadForce(const double&, const double& torque, const double& attack_length)
 {
     // set effect
     m_effect.u.constant.level = 0x7fff * std::min(torque, m_max_torque);
@@ -184,7 +182,7 @@ auto G29ForceFeedback::sendTargetFeedback(const ros_g29_logitech_controller::For
 void G29ForceFeedback::initDevice()
 {
     // setup device
-    unsigned char key_bits[1+KEY_MAX/8/sizeof(unsigned char)];
+    // unsigned char key_bits[1+KEY_MAX/8/sizeof(unsigned char)];
     unsigned char abs_bits[1+ABS_MAX/8/sizeof(unsigned char)];
     unsigned char ff_bits[1+FF_MAX/8/sizeof(unsigned char)];
     struct input_event event;

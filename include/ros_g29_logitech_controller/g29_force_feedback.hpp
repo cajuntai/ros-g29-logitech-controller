@@ -1,10 +1,7 @@
 #pragma once
 
-#include <memory>
 #include <atomic>
 #include <future>
-
-#include <ros/ros.h>
 
 #include "ros_g29_logitech_controller/ForceFeedback.h"
 #include <linux/input.h>
@@ -26,20 +23,15 @@ public:
         double eps;
         bool auto_centering = false;
     };
+    
 
     G29ForceFeedback(Configuration config);
     ~G29ForceFeedback();
     auto sendTargetFeedback(const ros_g29_logitech_controller::ForceFeedback& feedback_msg) -> void;
 
 private:
-    ros::NodeHandle nh_;
-    // ros::Subscriber sub_target;
-
-    // ros::Timer timer;
-    std::future<void> m_ff_loop_future;
-
+    // Cleanup flags
     std::atomic_bool m_should_exit;
-
     // Device info
     int m_device_handle;
     int m_axis_code;
@@ -56,7 +48,8 @@ private:
     double m_auto_centering_max_position;
     double m_eps;
     bool m_auto_centering;
-
+    // FF message-related
+    std::future<void> m_ff_loop_future;
     ros_g29_logitech_controller::ForceFeedback m_target;
     bool m_is_target_updated = false;
     bool m_is_brake_range = false;
@@ -64,6 +57,7 @@ private:
     double m_position;
     double m_torque;
     double m_attack_length;
+
 
     auto targetCallback(const ros_g29_logitech_controller::ForceFeedback& in_target) -> void;
     auto loop() -> void;
