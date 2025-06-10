@@ -32,6 +32,7 @@ G29ForceFeedback::G29ForceFeedback(Configuration config)
     m_ff_loop_future = std::async(std::launch::async, &G29ForceFeedback::loop, this);
 }
 
+
 G29ForceFeedback::~G29ForceFeedback()
 {
     m_should_exit.store(true);
@@ -61,8 +62,9 @@ G29ForceFeedback::~G29ForceFeedback()
     }
 }
 
+
 // update input event with timer callback
-void G29ForceFeedback::loop()
+auto G29ForceFeedback::loop() -> void
 {
     struct input_event event;
     // double last_position = m_position;
@@ -94,10 +96,10 @@ void G29ForceFeedback::loop()
 }
 
 
-void G29ForceFeedback::calcRotateForce(double& torque,
+auto G29ForceFeedback::calcRotateForce(double& torque,
                                        double& attack_length,
                                        const ros_g29_logitech_controller::ForceFeedback& target,
-                                       const double& current_position)
+                                       const double& current_position) -> void
 {
     double diff = target.position - current_position;
     double direction = (diff > 0.0) ? 1.0 : -1.0;
@@ -121,9 +123,9 @@ void G29ForceFeedback::calcRotateForce(double& torque,
 }
 
 
-void G29ForceFeedback::calcCenteringForce(double &torque,
+auto G29ForceFeedback::calcCenteringForce(double &torque,
                                           const ros_g29_logitech_controller::ForceFeedback &target,
-                                          const double &current_position)
+                                          const double &current_position) -> void
 {
     double diff = target.position - current_position;
     double direction = (diff > 0.0) ? 1.0 : -1.0;
@@ -143,7 +145,7 @@ void G29ForceFeedback::calcCenteringForce(double &torque,
 
 
 // update input event with writing information to the event file
-void G29ForceFeedback::uploadForce(const double&, const double& torque, const double& attack_length)
+auto G29ForceFeedback::uploadForce(const double&, const double& torque, const double& attack_length) -> void
 {
     // set effect
     m_effect.u.constant.level = 0x7fff * std::min(torque, m_max_torque);
@@ -179,7 +181,7 @@ auto G29ForceFeedback::sendTargetFeedback(const ros_g29_logitech_controller::For
 
 
 // initialize force feedback device
-void G29ForceFeedback::initDevice()
+auto G29ForceFeedback::initDevice() -> void
 {
     // setup device
     // unsigned char key_bits[1+KEY_MAX/8/sizeof(unsigned char)];
@@ -286,7 +288,7 @@ void G29ForceFeedback::initDevice()
 
 
 // util for initDevice()
-int G29ForceFeedback::testBit(int bit, unsigned char *array)
+auto G29ForceFeedback::testBit(int bit, unsigned char *array) -> int
 {
     return ((array[bit / (sizeof(unsigned char) * 8)] >> (bit % (sizeof(unsigned char) * 8))) & 1);
 }
