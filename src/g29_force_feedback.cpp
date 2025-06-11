@@ -11,6 +11,9 @@
 
 #include "ros_g29_logitech_controller/g29_force_feedback.hpp"
 
+constexpr double MAX_POSITION_POS = 1.0;
+constexpr double MAX_POSITION_NEG = -1.0;
+
 
 G29ForceFeedback::G29ForceFeedback(Configuration config)
 :   m_axis_code(ABS_MAX)
@@ -102,7 +105,7 @@ auto G29ForceFeedback::calcRotateForce(double& torque,
                                        const double& current_position) -> void
 {
     double diff = target.position - current_position;
-    double direction = (diff > 0.0) ? 1.0 : -1.0;
+    double direction = (diff > 0.0) ? MAX_POSITION_POS : MAX_POSITION_NEG;
 
     if (fabs(diff) < m_eps)
     {
@@ -128,7 +131,7 @@ auto G29ForceFeedback::calcCenteringForce(double &torque,
                                           const double &current_position) -> void
 {
     double diff = target.position - current_position;
-    double direction = (diff > 0.0) ? 1.0 : -1.0;
+    double direction = (diff > 0.0) ? MAX_POSITION_POS : MAX_POSITION_NEG;
 
     if (fabs(diff) < m_eps)
     {
