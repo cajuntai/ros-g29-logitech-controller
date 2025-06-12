@@ -101,13 +101,16 @@ auto G29ForceFeedback::loop() -> void
     struct input_event event;
     // double last_position = m_position;
 
-    while (!m_should_exit.load())
+    while (!m_should_exit.load(std::memory_order_relaxed))
     {
         if (!m_should_publish_ff.load())
         {
-            std::cout << "Force feedback loop is paused. Discarding FF message." << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(m_loop_rate)));
-            continue;
+            // Activates auto-centrering if enabled
+            if (m_auto_centering)
+            {
+                m_target.position = 0.0;
+                m_target.torque = m_auto_centering_max_torque;
+            }
         }
 
         // get current state
