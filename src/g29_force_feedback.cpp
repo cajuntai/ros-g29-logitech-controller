@@ -16,7 +16,8 @@ constexpr double MAX_POSITION_NEG = -1.0;
 
 
 G29ForceFeedback::G29ForceFeedback(const Configuration config)
-:   m_axis_code(ABS_MAX)
+:   m_axis_code(ABS_X),
+    m_should_publish_ff(true)
 {
     m_device_name                 = config.device_name;
     m_loop_rate                   = config.loop_rate;
@@ -264,13 +265,14 @@ auto G29ForceFeedback::initDevice() -> void
     }
 
     // Commented due to constant faulty error
-    // m_axis_max = abs_info.maximum;
-    // m_axis_min = abs_info.minimum;
-    // if (m_axis_min >= m_axis_max)
-    // {
-    //     std::cout << "ERROR: axis range has bad value" << std::endl;
-    //     throw std::runtime_error("Failed to open device!");
-    // }
+    m_axis_max = abs_info.maximum;
+    m_axis_min = abs_info.minimum;
+    std::cout << "axis range: [" << m_axis_min << ", " << m_axis_max << "]" << std::endl;
+    if (m_axis_min >= m_axis_max)
+    {
+        std::cout << "ERROR: axis range has bad value" << std::endl;
+        throw std::runtime_error("Failed to open device!");
+    }
 
     // check force feedback is supported?
     if(!testBit(FF_CONSTANT, ff_bits))
