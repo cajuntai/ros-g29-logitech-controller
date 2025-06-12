@@ -201,7 +201,8 @@ auto G29ForceFeedback::uploadForce(const double&, const double& torque, const do
     // upload effect
     if (ioctl(m_device_handle, EVIOCSFF, &m_effect) < 0)
     {
-        std::cout << "failed to upload effect" << std::endl;
+        std::cout << "failed to upload effect! Possibly due to physical disconnection. Reconnecting..." << std::endl;
+        initDevice();
     }
 }
 
@@ -233,15 +234,21 @@ auto G29ForceFeedback::initDevice() -> void
     struct input_event event;
     struct input_absinfo abs_info;
 
-    m_device_handle = open(m_device_name.c_str(), O_RDWR|O_NONBLOCK);
-    if (m_device_handle < 0)
+    m_device_handle = -1;
+    while (m_device_handle < 0)
     {
-        std::cout << "ERROR: cannot open device : "<< m_device_name << std::endl;
-        throw std::runtime_error("Failed to open device!");
-    }
-    else
-    {
-        std::cout << "device opened" << std::endl;
+        m_device_handle = open(m_device_name.c_str(), O_RDWR|O_NONBLOCK);
+        if (m_device_handle < 0)
+        {
+            std::cout << "ERROR: cannot open device : "<< m_device_name 
+                      << "Retrying every 2 seconds..."
+                      << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+        else
+        {
+            std::cout << "Opened device: " << m_device_name << std::endl;
+        }
     }
 
     // which axes has the device?
