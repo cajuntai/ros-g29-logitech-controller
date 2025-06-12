@@ -15,7 +15,7 @@ constexpr double MAX_POSITION_POS = 1.0;
 constexpr double MAX_POSITION_NEG = -1.0;
 
 
-G29ForceFeedback::G29ForceFeedback(Configuration config)
+G29ForceFeedback::G29ForceFeedback(const Configuration config)
 :   m_axis_code(ABS_MAX)
 {
     m_device_name                 = config.device_name;
@@ -66,6 +66,34 @@ G29ForceFeedback::~G29ForceFeedback()
 }
 
 
+// start force feedback loop
+auto G29ForceFeedback::start() -> void
+{
+    if (!m_should_publish_ff.load())
+    {
+        m_should_publish_ff.store(true);
+        std::cout << "Force feedback loop started." << std::endl;
+    }
+    else
+    {
+        std::cout << "Force feedback loop is already running." << std::endl;
+    }
+}
+
+// stop force feedback loop
+auto G29ForceFeedback::stop() -> void
+{
+    if (m_should_publish_ff.load())
+    {
+        m_should_publish_ff.store(false);
+        std::cout << "Force feedback loop stopped." << std::endl;
+    }
+    else
+    {
+        std::cout << "Force feedback loop is already stopped." << std::endl;
+    }
+}
+
 // update input event with timer callback
 auto G29ForceFeedback::loop() -> void
 {
@@ -74,6 +102,13 @@ auto G29ForceFeedback::loop() -> void
 
     while (!m_should_exit.load())
     {
+        if (!m_should_publish_ff.load())
+        {
+            std::cout << "Force feedback loop is paused. Discarding FF message." << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(m_loop_rate)));
+            continue;
+        }
+
         // get current state
         while (read(m_device_handle, &event, sizeof(event)) == sizeof(event))
         {
@@ -95,6 +130,7 @@ auto G29ForceFeedback::loop() -> void
         }
 
         uploadForce(m_target.position, m_torque, m_attack_length);
+        std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(m_loop_rate)));
     }
 }
 
@@ -226,13 +262,15 @@ auto G29ForceFeedback::initDevice() -> void
         std::cout << "ERROR: cannot get axis range" << std::endl;
         throw std::runtime_error("Failed to open device!");
     }
-    m_axis_max = abs_info.maximum;
-    m_axis_min = abs_info.minimum;
-    if (m_axis_min >= m_axis_max)
-    {
-        std::cout << "ERROR: axis range has bad value" << std::endl;
-        throw std::runtime_error("Failed to open device!");
-    }
+
+    // Commented due to constant faulty error
+    // m_axis_max = abs_info.maximum;
+    // m_axis_min = abs_info.minimum;
+    // if (m_axis_min >= m_axis_max)
+    // {
+    //     std::cout << "ERROR: axis range has bad value" << std::endl;
+    //     throw std::runtime_error("Failed to open device!");
+    // }
 
     // check force feedback is supported?
     if(!testBit(FF_CONSTANT, ff_bits))

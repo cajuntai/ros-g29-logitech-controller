@@ -25,9 +25,11 @@ public:
     };
     
 
-    G29ForceFeedback(Configuration config);
+    G29ForceFeedback(const Configuration config);
     ~G29ForceFeedback();
     auto sendTargetFeedback(const ros_g29_logitech_controller::ForceFeedback& feedback_msg) -> void;
+    auto start() -> void;
+    auto stop() -> void;
 
 private:
     // Cleanup flags
@@ -48,6 +50,7 @@ private:
     double m_auto_centering_max_position;
     double m_eps;
     bool m_auto_centering;
+    std::atomic_bool m_should_publish_ff;
     // FF message-related
     std::future<void> m_ff_loop_future;
     ros_g29_logitech_controller::ForceFeedback m_target;
