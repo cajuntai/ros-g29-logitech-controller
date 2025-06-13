@@ -6,6 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <future>
+#include <thread>
 
 #include "ros_g29_logitech_controller/ForceFeedback.h"
 
@@ -30,7 +31,13 @@ G29ForceFeedback::G29ForceFeedback(const Configuration config)
     m_eps                         = config.eps;
     m_auto_centering              = config.auto_centering;
 
-    initDevice();
+    /** \note Required if we're calling initDevice() at constructor with auto-reconnection, as the destructor won't be called until the constructor exits
+      *        which, causes the shutdown flag to not trigger and causing initDevice to be stuck in an infinite loop. 
+      */
+    m_init_device_future = std::async(
+        std::launch::async,
+        [this]() -> void { initDevice(); }
+    );
 
     std::this_thread::sleep_for(std::chrono::seconds(1));   // Grace time after opening device
     m_ff_loop_future = std::async(std::launch::async, &G29ForceFeedback::loop, this);
@@ -39,6 +46,8 @@ G29ForceFeedback::G29ForceFeedback(const Configuration config)
 
 G29ForceFeedback::~G29ForceFeedback()
 {
+    std::cout << "Stopping force feedback..." << std::endl;
+
     m_should_exit.store(true);
     if (m_ff_loop_future.valid())
     {
@@ -46,7 +55,7 @@ G29ForceFeedback::~G29ForceFeedback()
         {
             std::cout << "Stopping control thread...";
             m_ff_loop_future.get();
-            std::cout << "Done!" << std::endl;
+            std::cout << "Control thread stopped!" << std::endl;
         }
         catch (const std::exception& e)
         {
@@ -54,15 +63,32 @@ G29ForceFeedback::~G29ForceFeedback()
         }
     }
 
-    m_effect.type = FF_CONSTANT;
-    m_effect.id = -1;
-    m_effect.u.constant.level = 0;
-    m_effect.direction = 0;
-
-    // upload m_effect
-    if (ioctl(m_device_handle, EVIOCSFF, &m_effect) < 0)
+    if (m_init_device_future.valid())
     {
-        std::cout << "Failed to upload m_effect" << std::endl;
+        try
+        {
+            std::cout << "Stopping device initialisation thread...";
+            m_init_device_future.get();
+            std::cout << "Device initialisation thread stopped!" << std::endl;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[ERROR] Caught exception when stopping device initialisation thread: " << e.what() << std::endl;
+        }
+    }
+
+    if (m_device_handle >= 0)
+    {
+        m_effect.type = FF_CONSTANT;
+        m_effect.id = -1;
+        m_effect.u.constant.level = 0;
+        m_effect.direction = 0;
+
+        // upload m_effect
+        if (ioctl(m_device_handle, EVIOCSFF, &m_effect) < 0)
+        {
+            std::cout << "Failed to upload m_effect" << std::endl;
+        }
     }
 }
 
@@ -237,11 +263,17 @@ auto G29ForceFeedback::initDevice() -> void
     m_device_handle = -1;
     while (m_device_handle < 0)
     {
+        if (m_should_exit.load())
+        {
+            std::cout << "Shutdown hook called! Cancelling opening device: " << m_device_name << std::endl;
+            return;
+        }
+
         m_device_handle = open(m_device_name.c_str(), O_RDWR|O_NONBLOCK);
         if (m_device_handle < 0)
         {
-            std::cout << "ERROR: cannot open device : "<< m_device_name 
-                      << "Retrying every 2 seconds..."
+            std::cout << "ERROR: cannot open device : "<< m_device_name << "!"
+                      << " Retrying every 2 seconds..."
                       << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(2));
         }

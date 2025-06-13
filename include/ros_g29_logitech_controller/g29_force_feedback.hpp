@@ -53,6 +53,7 @@ private:
     std::atomic_bool m_should_publish_ff;
     // FF message-related
     std::future<void> m_ff_loop_future;
+    std::future<void> m_init_device_future;
     ros_g29_logitech_controller::ForceFeedback m_target;
     bool m_is_target_updated = false;
     bool m_is_brake_range = false;

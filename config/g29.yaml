@@ -4,7 +4,7 @@ max_torque: 1.0
 min_torque: 0.2
 brake_torque_rate: 0.2
 brake_position: 0.1
-auto_centering_max_torque: 0.7  # Auto=-centering torque strength
+auto_centering_max_torque: 0.7  # Auto-centering torque strength
 auto_centering_max_position: 0.2
 eps: 0.01
 auto_centering: true
